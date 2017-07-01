@@ -33,7 +33,10 @@ References:
 
 -----------------------------------------------------------------------------
 
-Maintained by Daniel Karrasch,
+Maintained by Daniel Karrasch
+
 karrasch at ma dot tum dot de
+
 https://www-m3.ma.tum.de/Allgemeines/DanielKarrasch
+
 June 20, 2017.
