@@ -37,9 +37,14 @@ createCrossChannelMixer
 % the second column
 % Section must oriented such that the normal vector field from the Eulerian
 % flux integral points to the RIGHT.
+
 nPointsC = 20;
+% horizontal section
 C = [linspace(CrossChannelMixer.p(end)+CrossChannelMixer.r(end) , CrossChannelMixer.p(1)-CrossChannelMixer.r(1) , nPointsC)' , ...
      zeros(nPointsC,1)];
+% vertical section
+% C = [(CrossChannelMixer.p(end)+CrossChannelMixer.r(end))*ones(nPointsC,1),...
+%     linspace(0,CrossChannelMixer.f,nPointsC)'];
  
 % Time Interval:
 % The flux is integrated over a time interval T=[t0,t1]
