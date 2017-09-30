@@ -89,7 +89,7 @@ testVelocityField(v,C);
 [BoundingPolygon,BoundingPolygonComponents] = CalcBoundaryD_Adaptive(C,v,T,optLagrange);
 
 %% Divide Polygon
-[BoundingPolygon,simpleLoops,connectedComponents,intersections] = dividePolygon(BoundingPolygon(1:end-1,:));
+[BoundingPolygon,simpleLoops,connectedComponents,intersections] = dividePolygon(BoundingPolygon);
 
 %% Calculate Winding numbers
 [wNo,~,~] = polygonCCwindings(BoundingPolygon,connectedComponents);

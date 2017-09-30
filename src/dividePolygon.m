@@ -68,14 +68,23 @@ function [Polygon,simpleLoops,connectedComponents,intersections] = dividePolygon
 % POSSIBILITY OF SUCH DAMAGE.
 
 
-%% Pre-Process Polygon to be a Polygon in the complex plane
-% Enables to use ComplexVisual Toolbox by Christian Ludwig
-Polygon = Polygon'; 
+%% Find intersections and add Crossing Points to the Polygon
+% ALTERNATIVE 1: should be used when the curve doesn't have too many points
+% Polygon = Polygon';
+% intersections = InterX(Polygon);
+% % complexification for later use
+% Polygon(2,:) = Polygon(2,:)*1i;
+% Polygon = sum(Polygon,1);
+% % END OF ALTERNATIVE 1
+
+% % ALTERNATIVE 2: is faster on curve with many points (>5000), but may
+% miss intersection points, fixable by increasing variable "block" in line
+% 242 of intersectPolylines.m
+Polygon = Polygon';
 Polygon(2,:) = Polygon(2,:)*1i;
 Polygon = sum(Polygon,1);
-
-%% Find intersections and add Crossing Points to the Polygon
 intersections = intersectPolylines(Polygon,[]);
+% % END OF ALTERNATIVE 2
 
 [Polygon,~,intersections] = augmentPolylinePoI(Polygon,[],intersections);
 

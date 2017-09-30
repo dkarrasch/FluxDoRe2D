@@ -239,7 +239,8 @@ end
 function sections=build_index_sections (first,last)
 % BUILD_INDEX_SECTIONS: von first bis last in 10er-Schritten
 anz=last-first;
-sections=first:ceil(anz/10):last;
+blocks = 20;
+sections=first:ceil(anz/blocks):last;
 if (sections(end)~=last)
     sections(end+1)=last;
 end
