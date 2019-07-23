@@ -17,6 +17,7 @@ addpath(genpath('..'))
 %% Step 0: Eulerian flux integral for comparison
 syms x y t real
 
+t_init = 0.0;
 t_end = 2.2;
 x1 = -0.1;
 x2 = 0.3;
@@ -65,73 +66,76 @@ v = @(t, x) velocityFieldComp(t, x);
 %% Step 3: Options for the Lagrangian Method
 % Several options are available for the Lagrangian Method. Open
 % setOptLagrange.m for more information and modification
-setOptLagrange
-% test different length tolerances
-optLagrange.TolLength = 0.01;
 
-%% Step 4: Flux integration using the Lagrangian Method
-% Depending on whether a bounding Polygon for the region of interest is
-% defined or not the Lagrangian method is executed as follows. 'IntFlux' is
-% the scalar result of the flux integration, 'addData' is a struct
-% containing additional Data
-
-% POOR MAN'S INTEGRATION
-% manual integration, to be included in integrateOverSubsets.m
-density = matlabFunction(subs(rho, t, t_init));
-
-tic
-[intFlux, addData, flag] = fluxLagrangeSteadySurface2D_adaptive(C, v, T, optLagrange);
-% [intFlux, addData,flag] = fluxLagrangeSteadySurface2D(C, v, T, N, optLagrange.ODE_RelTol);
-
+hs = [0.05, 0.01, 0.005, 0.001];
 % optionally: add point grid, TODO: replace by bounding box coords, adjust resolution
 refine = false;
 if refine
     [X, Y] = meshgrid(-1:optLagrange.TolLength:1, -1:optLagrange.TolLength:1);
     Pi = [X(:), Y(:)];
 end
-
 % optionally: visualize triangulation of each donating region
 visualize = false;
 
-DP = table2cell(addData.DividedPolygons);
-wNo = addData.WindingNumbers;
-[lam,w] = quadpts(4);
-nq = size(lam, 1);
-intLagrange = 0;
-for i=1:numel(addData.DividedPolygons) % for each simple loop with nonzero wNo
-    if not(wNo(i)==0)
-        DPi = DP{1,i};
-        index = (sum(DPi(1:end-1,:) == DPi(2:end,:),2)<2); % exclude duplicates
-        q = sum(index);
-        DPi = DPi(index,:);
-        if refine
-            DT = delaunayTriangulation([DPi; Pi], [(1:(q-1))', (2:q)'; q 1]);
-        else
-            DT = delaunayTriangulation(DPi, [(1:(q-1))', (2:q)'; q 1]);
+setOptLagrange
+
+% test different length tolerances
+for j=1:length(hs)
+    optLagrange.TolLength = hs(j);
+
+    %% Step 4: Flux integration using the Lagrangian Method
+    % Depending on whether a bounding Polygon for the region of interest is
+    % defined or not the Lagrangian method is executed as follows. 'IntFlux' is
+    % the scalar result of the flux integration, 'addData' is a struct
+    % containing additional Data
+
+    % POOR MAN'S INTEGRATION
+    % manual integration, to be included in integrateOverSubsets.m
+    density = matlabFunction(subs(rho, t, t_init));
+
+    tic
+    [intFlux, addData, flag] = fluxLagrangeSteadySurface2D_adaptive(C, v, T, optLagrange);
+    % [intFlux, addData,flag] = fluxLagrangeSteadySurface2D(C, v, T, N, optLagrange.ODE_RelTol);
+
+    DP = table2cell(addData.DividedPolygons);
+    wNo = addData.WindingNumbers;
+    [lam,w] = quadpts(4);
+    nq = size(lam, 1);
+    intLagrange = 0;
+    for i=1:numel(addData.DividedPolygons) % for each simple loop with nonzero wNo
+        if not(wNo(i)==0)
+            DPi = DP{1,i};
+            index = (sum(DPi(1:end-1,:) == DPi(2:end,:),2)<2); % exclude duplicates
+            q = sum(index);
+            DPi = DPi(index,:);
+            if refine
+                DT = delaunayTriangulation([DPi; Pi], [(1:(q-1))', (2:q)'; q 1]);
+            else
+                DT = delaunayTriangulation(DPi, [(1:(q-1))', (2:q)'; q 1]);
+            end
+            inside = isInterior(DT);
+            ti = DT.ConnectivityList(inside, :);
+            p = DT.Points;
+            if visualize
+                plotDonatingRegions(addData,C)
+                triplot(DT.ConnectivityList(inside, :),DT.Points(:,1),DT.Points(:,2))
+            end
+            v1 = p(ti(:,3),:) - p(ti(:,2),:); v2 = p(ti(:,1),:) - p(ti(:,3),:); v3 = p(ti(:,2),:) - p(ti(:,1),:);
+            area = 0.5*(-v3(:,1).*v2(:,2) + v3(:,2).*v2(:,1));       % areas of triangles
+            intList = zeros(size(ti,1),1);
+            for k = 1:nq
+                x = lam(k,1)*p(ti(:,1),:) + lam(k,2)*p(ti(:,2),:) + lam(k,3)*p(ti(:,3),:);
+                intList = intList + w(k)*density(x(:,1), x(:,2));
+            end
+            intLagrange = intLagrange + wNo(i) * sum(area .* intList);
         end
-        inside = isInterior(DT);
-        ti = DT.ConnectivityList(inside, :);
-        p = DT.Points;
-        if visualize
-            plotDonatingRegions(addData,C)
-            triplot(DT.ConnectivityList(inside, :),DT.Points(:,1),DT.Points(:,2))
-        end
-        v1 = p(ti(:,3),:) - p(ti(:,2),:); v2 = p(ti(:,1),:) - p(ti(:,3),:); v3 = p(ti(:,2),:) - p(ti(:,1),:);
-        area = 0.5*(-v3(:,1).*v2(:,2) + v3(:,2).*v2(:,1));       % areas of triangles
-        intList = zeros(size(ti,1),1);
-        for k = 1:nq
-            x = lam(k,1)*p(ti(:,1),:) + lam(k,2)*p(ti(:,2),:) + lam(k,3)*p(ti(:,3),:);
-            intList = intList + w(k)*density(x(:,1), x(:,2));
-        end
-        intLagrange = intLagrange + wNo(i) * sum(area .* intList);
     end
+
+    disp(['Length tolerance = ' num2str(hs(j)) '.'])
+    disp(['Integration took ' num2str(toc) ' seconds.'])
+    disp(['Integrated compressible (restricted) flux = ' num2str(intLagrange)])
+    disp(['Relative error: ' num2str(abs(intLagrange-intEuler)/abs(intEuler))])
 end
-
-
-disp(['Integration took ' num2str(toc) ' seconds.'])
-disp(['Integrated compressible (restricted) flux = ' num2str(intLagrange)])
-disp(['Relative error: ' num2str(abs(intLagrange-intEuler)/abs(intEuler))])
-
 %% Step 5: Visualizing results
 % Using the struct 'addData' the following visualizations can be performed
 
